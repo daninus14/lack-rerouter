@@ -1,0 +1,44 @@
+* lack-rerouter
+lack middleware to reroute URIs of requests
+
+* Instalattion
+
+Get the code from the reposiroty https://github.com/daninus14/lack-rerouter and make sure it is in a subdirectory of the registries of asdf or quicklisp.
+
+* Usage
+#+BEGIN_SRC common-lisp
+  (ql:quickload "clack")
+  (ql:quickload "lack")
+  (ql:quickload "lack-rerouter")
+
+  (setf *app*
+        (lambda (env)
+          (declare (ignorable env))
+          '(200 (:content-type "text/plain") ("Hello, Compression2!"))))
+
+  (setf *compressed-app*
+        (lack:builder
+         (:rerouter :route-prefix "/assets/" :static-files-path "/static/" :operation :prepend)
+         (:compression-cache :cache-path "bin/cache" :static-files-path "/static/")
+         (:static :path "/assets/"
+                  :root #P"static/")              
+         ,*app*))
+
+  (setf *clack-handler*
+        (clack:clackup *compressed-app*))
+
+  ;; To Stop the App
+  (clack:stop *clack-handler*)
+#+END_SRC
+
+Note that this will prepend "/static/" to any request which starts with the route "/assets".
+
+* API
+
+#+BEGIN_SRC common-lisp
+  (lambda (app &key route-prefix static-files-path (operation :prepend))
+#+END_SRC
+
+Valid operations are =:prepend=, =:replace=, and any function which takes a string URI route and returns a new string with the wanted new URI route: =(lambda (path-info) (do the magic here ...))=
+
+Note that this middleware does not affect the web application at all and *only* changes the =path-info= environment =env= variable. See https://github.com/fukamachi/lack?tab=readme-ov-file#the-environment for details of the environment variable.
